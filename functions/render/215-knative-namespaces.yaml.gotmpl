@@ -29,7 +29,7 @@ spec:
       kind: Namespace
       metadata:
         name: {{ $servingNs }}
-        labels: {{ $state.labels | toJson }}
+        labels: {{ merge (dict "istio-injection" "enabled") $state.labels | toJson }}
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
@@ -58,7 +58,7 @@ spec:
       kind: Namespace
       metadata:
         name: {{ $eventingNs }}
-        labels: {{ $state.labels | toJson }}
+        labels: {{ merge (dict "istio-injection" "enabled") $state.labels | toJson }}
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}

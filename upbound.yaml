@@ -10,7 +10,7 @@ spec:
     version: '>=v0.6.0'
   - apiVersion: pkg.crossplane.io/v1
     kind: Configuration
-    package: ghcr.io/hops-ops/helm-istiod
+    package: ghcr.io/hops-ops/helm-istio
     version: '>=v0.1.0'
   - apiVersion: pkg.crossplane.io/v1
     kind: Configuration

@@ -63,12 +63,12 @@ spec:
                     enum:
                     - ProviderConfig
                     - ClusterProviderConfig
-              istiod:
-                description: Configuration for the Istio control plane (istiod) component.
+              istio:
+                description: Configuration for the Istio control plane component.
                 type: object
                 properties:
                   name:
-                    description: Release name. Defaults to istiod.
+                    description: Release name. Defaults to istio.
                     type: string
                   namespace:
                     description: Namespace for this component. Defaults to istio-system.

@@ -44,6 +44,39 @@ spec:
 {{- end }}
 
 # ==============================================================================
+# PeerAuthentication: PERMISSIVE mTLS for knative-serving namespace
+# ==============================================================================
+# Required for Istio sidecar-injected pods to communicate with Knative components.
+{{- if and $knServing.enabled $servingNsReady }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-knative-serving-peer-auth
+  annotations:
+    {{ setResourceNameAnnotation "knative-serving-peer-auth" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: security.istio.io/v1beta1
+      kind: PeerAuthentication
+      metadata:
+        name: default
+        namespace: {{ $knServing.namespace }}
+      spec:
+        mtls:
+          mode: PERMISSIVE
+  providerConfigRef:
+    name: {{ $k8sPCR.name }}
+    kind: {{ $k8sPCR.kind }}
+  readiness:
+    policy: DeriveFromCelQuery
+    celQuery: "has(object.metadata.uid)"
+{{- end }}
+
+# ==============================================================================
 # Usage: Protect knative-operator from deletion until knative-serving is deleted
 # ==============================================================================
 # Knative CRDs must exist for cleanup of the KnativeServing CR.

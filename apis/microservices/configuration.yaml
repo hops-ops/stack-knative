@@ -10,7 +10,7 @@ spec:
   dependsOn:
   - function: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
     version: ">=v0.6.0"
-  - configuration: ghcr.io/hops-ops/helm-istiod
+  - configuration: ghcr.io/hops-ops/helm-istio
     version: ">=v0.1.0"
   - configuration: ghcr.io/hops-ops/helm-knative-operator
     version: ">=v0.1.0"

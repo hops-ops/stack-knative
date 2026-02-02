@@ -38,7 +38,7 @@
 # ==============================================================================
 # Per-component defaults
 # ==============================================================================
-{{- $ist := $spec.istiod | default dict }}
+{{- $ist := $spec.istio | default dict }}
 {{- $knOp := $spec.knativeOperator | default dict }}
 {{- $knServing := $spec.knativeServing | default dict }}
 {{- $knEventing := $spec.knativeEventing | default dict }}
@@ -68,8 +68,8 @@
   "labels" $labels
   "helmProviderConfigRef" $helmProviderConfigRef
   "kubernetesProviderConfigRef" $k8sProviderConfigRef
-  "istiod" (dict
-    "name" ($ist.name | default "istiod")
+  "istio" (dict
+    "name" ($ist.name | default "istio")
     "namespace" ($ist.namespace | default "istio-system")
     "values" ($ist.values | default dict)
     "overrideAllValues" ($ist.overrideAllValues | default dict)
@@ -91,7 +91,13 @@
     "enabled" $knEventingEnabled
     "name" ($knEventing.name | default "knative-eventing")
     "namespace" ($knEventing.namespace | default "knative-eventing")
-    "spec" ($knEventing.spec | default dict)
+    "spec" (merge ($knEventing.spec | default dict) (dict
+      "config" (dict
+        "features" (dict
+          "istio" "enabled"
+        )
+      )
+    ))
     "overrideAllSpec" ($knEventing.overrideAllSpec | default dict)
   )
   "nats" (dict
