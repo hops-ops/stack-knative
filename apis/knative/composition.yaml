@@ -1,15 +1,15 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: microservices.stacks.hops.ops.com.ai
+  name: knatives.stacks.hops.ops.com.ai
 spec:
   compositeTypeRef:
     apiVersion: stacks.hops.ops.com.ai/v1alpha1
-    kind: Microservices
+    kind: Knative
   mode: Pipeline
   pipeline:
   - functionRef:
-      name: hops-ops-stack-microservicesrender
+      name: hops-ops-stack-knativerender
     step: render
   - functionRef:
       name: crossplane-contrib-function-auto-ready

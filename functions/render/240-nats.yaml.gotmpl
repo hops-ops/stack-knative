@@ -1,14 +1,14 @@
 # code: language=yaml
 #
-# Compose the base helm.hops.ops.com.ai/NATS XR (optional)
+# Helm release for NATS (optional)
 #
 
 {{- $nats := $state.nats }}
 
 {{- if $nats.enabled }}
 ---
-apiVersion: helm.hops.ops.com.ai/v1alpha1
-kind: NATS
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
 metadata:
   name: {{ $state.name }}-{{ $nats.name }}
   annotations:
@@ -16,18 +16,32 @@ metadata:
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
-  clusterName: {{ $state.clusterName }}
-  labels: {{ $state.labels | toJson }}
+  forProvider:
+    chart:
+      name: nats
+      repository: https://nats-io.github.io/k8s/helm/charts/
+      version: 2.12.4
+    namespace: {{ $nats.namespace }}
+    {{- if $nats.overrideAllValues }}
+    values:
+      {{- toYaml $nats.overrideAllValues | nindent 6 }}
+    {{- else }}
+    values:
+      config:
+        cluster:
+          enabled: true
+          replicas: 3
+        jetstream:
+          enabled: true
+          fileStore:
+            pvc:
+              size: 10Gi
+      {{- if $nats.values }}
+      {{- toYaml $nats.values | nindent 6 }}
+      {{- end }}
+    {{- end }}
+  rollbackLimit: 3
   providerConfigRef:
     name: {{ $state.helmProviderConfigRef.name }}
     kind: {{ $state.helmProviderConfigRef.kind }}
-  namespace: {{ $nats.namespace }}
-  name: {{ $nats.name }}
-  {{- if $nats.overrideAllValues }}
-  overrideAllValues:
-    {{- toYaml $nats.overrideAllValues | nindent 4 }}
-  {{- else if $nats.values }}
-  values:
-    {{- toYaml $nats.values | nindent 4 }}
-  {{- end }}
 {{- end }}

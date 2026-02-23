@@ -1,7 +1,7 @@
 apiVersion: stacks.hops.ops.com.ai/v1alpha1
-kind: Microservices
+kind: Knative
 metadata:
-  name: microservices
+  name: knative
   namespace: default
 spec:
-  clusterName: my-cluster
+  clusterName: default

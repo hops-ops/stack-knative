@@ -10,14 +10,23 @@
 # ==============================================================================
 # Core defaults
 # ==============================================================================
-{{- $name := $metadata.name | default "microservices" }}
+{{- $name := $metadata.name | default "knative" }}
 {{- $clusterName := $spec.clusterName | default $name }}
 {{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+{{- $hostedZone := $spec.hostedZone | default "" }}
+
+# Cert-manager
+{{- $certManager := $spec.certManager | default dict }}
+{{- $certManagerEnabled := false }}
+{{- if hasKey $certManager "enabled" }}
+  {{- $certManagerEnabled = $certManager.enabled }}
+{{- end }}
+{{- $issuerRef := $certManager.issuerRef | default "name: letsencrypt-production\nkind: ClusterIssuer" }}
 
 # Labels
 {{- $defaultLabels := dict
   "hops.ops.com.ai/managed" "true"
-  "hops.ops.com.ai/microservices" $name
+  "hops.ops.com.ai/knative" $name
 }}
 {{- $labels := merge $defaultLabels ($spec.labels | default dict) }}
 
@@ -38,7 +47,6 @@
 # ==============================================================================
 # Per-component defaults
 # ==============================================================================
-{{- $ist := $spec.istio | default dict }}
 {{- $knOp := $spec.knativeOperator | default dict }}
 {{- $knServing := $spec.knativeServing | default dict }}
 {{- $knEventing := $spec.knativeEventing | default dict }}
@@ -53,10 +61,76 @@
 {{- if hasKey $knEventing "enabled" }}
   {{- $knEventingEnabled = $knEventing.enabled }}
 {{- end }}
-{{- $natsEnabled := false }}
+{{- $natsEnabled := true }}
 {{- if hasKey $nats "enabled" }}
   {{- $natsEnabled = $nats.enabled }}
 {{- end }}
+
+# ==============================================================================
+# Knative Serving default spec
+# ==============================================================================
+{{- $servingConfig := dict
+  "features" (dict
+    "kubernetes.podspec-affinity" "enabled"
+    "kubernetes.podspec-securitycontext" "enabled"
+    "kubernetes.podspec-nodeselector" "enabled"
+    "kubernetes.podspec-tolerations" "enabled"
+    "kubernetes.podspec-topologyspreadconstraints" "enabled"
+  )
+  "gc" (dict
+    "max-non-active-revisions" "10"
+    "min-non-active-revisions" "2"
+    "retain-since-create-time" "48h"
+    "retain-since-last-active-time" "15h"
+  )
+  "istio" (dict
+    "local-gateways" "- name: knative-local-gateway\n  namespace: knative-serving\n  service: knative-local-gateway.istio-system.svc.cluster.local"
+  )
+  "network" (dict
+    "ingress-class" "istio.ingress.networking.knative.dev"
+  )
+}}
+{{- if $certManagerEnabled }}
+  {{- $servingConfig = set $servingConfig "certmanager" (dict
+    "issuerRef" $issuerRef
+  ) }}
+  {{- $_ := set (index $servingConfig "network") "external-domain-tls" "Enabled" }}
+{{- end }}
+{{- if $hostedZone }}
+  {{- $servingConfig = set $servingConfig "domain" (dict $hostedZone "") }}
+{{- end }}
+
+{{- $servingDefaults := dict
+  "ingress" (dict
+    "istio" (dict
+      "enabled" true
+    )
+  )
+  "config" $servingConfig
+}}
+{{- $servingSpec := merge ($knServing.spec | default dict) $servingDefaults }}
+
+# ==============================================================================
+# Knative Eventing default spec (istio + NATS channel when enabled)
+# ==============================================================================
+{{- $eventingDefaults := dict
+  "config" (dict
+    "features" (dict
+      "istio" "enabled"
+    )
+  )
+}}
+{{- if $natsEnabled }}
+  {{- $natsNs := $nats.namespace | default "nats" }}
+  {{- $eventingDefaults = merge $eventingDefaults (dict
+    "config" (dict
+      "default-ch-webhook" (dict
+        "default-ch-config" (printf "clusterDefault:\n  apiVersion: messaging.knative.dev/v1alpha1\n  kind: NatsJetStreamChannel\n  spec:\n    natsUrl: nats://%s.%s.svc.cluster.local:4222" ($nats.name | default "nats") $natsNs)
+      )
+    )
+  ) }}
+{{- end }}
+{{- $eventingSpec := merge ($knEventing.spec | default dict) $eventingDefaults }}
 
 # ==============================================================================
 # Initialize $state
@@ -66,14 +140,10 @@
   "clusterName" $clusterName
   "managementPolicies" $managementPolicies
   "labels" $labels
+  "hostedZone" $hostedZone
+  "certManager" (dict "enabled" $certManagerEnabled "issuerRef" $issuerRef)
   "helmProviderConfigRef" $helmProviderConfigRef
   "kubernetesProviderConfigRef" $k8sProviderConfigRef
-  "istio" (dict
-    "name" ($ist.name | default "istio")
-    "namespace" ($ist.namespace | default "istio-system")
-    "values" ($ist.values | default dict)
-    "overrideAllValues" ($ist.overrideAllValues | default dict)
-  )
   "knativeOperator" (dict
     "name" ($knOp.name | default "knative-operator")
     "namespace" ($knOp.namespace | default "knative-operator")
@@ -84,20 +154,14 @@
     "enabled" $knServingEnabled
     "name" ($knServing.name | default "knative-serving")
     "namespace" ($knServing.namespace | default "knative-serving")
-    "spec" ($knServing.spec | default dict)
+    "spec" $servingSpec
     "overrideAllSpec" ($knServing.overrideAllSpec | default dict)
   )
   "knativeEventing" (dict
     "enabled" $knEventingEnabled
     "name" ($knEventing.name | default "knative-eventing")
     "namespace" ($knEventing.namespace | default "knative-eventing")
-    "spec" (merge ($knEventing.spec | default dict) (dict
-      "config" (dict
-        "features" (dict
-          "istio" "enabled"
-        )
-      )
-    ))
+    "spec" $eventingSpec
     "overrideAllSpec" ($knEventing.overrideAllSpec | default dict)
   )
   "nats" (dict

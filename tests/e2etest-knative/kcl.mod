@@ -1,5 +1,5 @@
 [package]
-name = "e2etest-microservices"
+name = "e2etest-knative"
 version = "0.0.1"
 
 [dependencies]

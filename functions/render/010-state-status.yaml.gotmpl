@@ -10,7 +10,7 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "istio" "knative-operator" "namespace-knative-serving" "namespace-knative-eventing" "knative-serving" "knative-serving-peer-auth" "knative-eventing" "nats" }}
+{{- range $key := list "knative-operator" "namespace-knative-serving" "namespace-knative-eventing" "knative-serving" "knative-serving-peer-auth" "knative-eventing" "nats" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -27,7 +27,6 @@
 # Set observed state
 # ==============================================================================
 {{- $state = set $state "observed" (dict
-  "istio" (dict "ready" (get $checkReady "istio"))
   "knativeOperator" (dict "ready" (get $checkReady "knative-operator"))
   "namespaceKnativeServing" (dict "ready" (get $checkReady "namespace-knative-serving"))
   "namespaceKnativeEventing" (dict "ready" (get $checkReady "namespace-knative-eventing"))

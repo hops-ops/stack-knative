@@ -44,9 +44,8 @@ spec:
 {{- end }}
 
 # ==============================================================================
-# PeerAuthentication: PERMISSIVE mTLS for knative-serving namespace
+# PeerAuthentication: Istio mTLS permissive for knative-serving namespace
 # ==============================================================================
-# Required for Istio sidecar-injected pods to communicate with Knative components.
 {{- if and $knServing.enabled $servingNsReady }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
@@ -71,9 +70,6 @@ spec:
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
-  readiness:
-    policy: DeriveFromCelQuery
-    celQuery: "has(object.metadata.uid)"
 {{- end }}
 
 # ==============================================================================
@@ -92,8 +88,8 @@ metadata:
 spec:
   replayDeletion: true
   of:
-    apiVersion: helm.hops.ops.com.ai/v1alpha1
-    kind: KnativeOperator
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
     resourceRef:
       name: {{ $state.name }}-{{ $state.knativeOperator.name }}
   by:

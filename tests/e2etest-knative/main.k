@@ -4,27 +4,27 @@ import models.ai.com.ops.hops.stacks.v1alpha1 as stacksv1alpha1
 import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
 
 # ==============================================================================
-# E2E Test for Microservices (Kubernetes-only)
+# E2E Test for Knative (Kubernetes-only)
 #
 # Components run in-cluster: Helm releases + provider-kubernetes Objects.
 # No cloud credentials needed - uses InjectedIdentity for both providers.
 #
 # Run: make e2e
-# Run without cleanup: up test run tests/e2etest-microservices --e2e --skip-control-plane-cleanup
+# Run without cleanup: up test run tests/e2etest-knative --e2e --skip-control-plane-cleanup
 # ==============================================================================
 
 _now = str(int(math.floor(datetime.ticks())))
-_test_name = "e2e-microservices-" + _now
+_test_name = "e2e-knative-" + _now
 
 _items = [
     metav1alpha1.E2ETest {
-        metadata.name = "microservices-e2e"
+        metadata.name = "knative-e2e"
         spec = {
             crossplane = {
                 autoUpgrade.channel = "Rapid"
             }
             defaultConditions = ["Ready"]
-            timeoutSeconds = 3600  # 60 minutes - Istio + Knative Operator + Serving/Eventing
+            timeoutSeconds = 3600  # 60 minutes - Knative Operator + Serving/Eventing
             cleanupTimeoutSeconds = 1800  # 30 minutes
             skipDelete = False
 
@@ -85,11 +85,11 @@ _items = [
             ]
 
             # ==============================================================
-            # manifests: Microservices XR
+            # manifests: Knative XR
             # Deleted during cleanup (unless --skip-delete)
             # ==============================================================
             manifests = [
-                stacksv1alpha1.Microservices {
+                stacksv1alpha1.Knative {
                     metadata = {
                         name = _test_name
                         namespace = "default"

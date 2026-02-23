@@ -1,0 +1,7 @@
+apiVersion: stacks.hops.ops.com.ai/v1alpha1
+kind: Knative
+metadata:
+  name: knative
+  namespace: default
+spec:
+  clusterName: default

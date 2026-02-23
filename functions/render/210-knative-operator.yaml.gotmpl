@@ -1,13 +1,13 @@
 # code: language=yaml
 #
-# Compose the base helm.hops.ops.com.ai/KnativeOperator XR
+# Helm release for knative-operator
 #
 
 {{- $knOp := $state.knativeOperator }}
 
 ---
-apiVersion: helm.hops.ops.com.ai/v1alpha1
-kind: KnativeOperator
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
 metadata:
   name: {{ $state.name }}-{{ $knOp.name }}
   annotations:
@@ -15,17 +15,22 @@ metadata:
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
-  clusterName: {{ $state.clusterName }}
-  labels: {{ $state.labels | toJson }}
+  forProvider:
+    chart:
+      name: knative-operator
+      repository: https://knative.github.io/operator
+      url: https://github.com/knative/operator/releases/download/knative-v1.21.0/knative-operator-v1.21.0.tgz
+      version: 1.21.0
+    namespace: {{ $knOp.namespace }}
+    wait: true
+    {{- if $knOp.overrideAllValues }}
+    values:
+      {{- toYaml $knOp.overrideAllValues | nindent 6 }}
+    {{- else if $knOp.values }}
+    values:
+      {{- toYaml $knOp.values | nindent 6 }}
+    {{- end }}
+  rollbackLimit: 3
   providerConfigRef:
     name: {{ $state.helmProviderConfigRef.name }}
     kind: {{ $state.helmProviderConfigRef.kind }}
-  namespace: {{ $knOp.namespace }}
-  name: {{ $knOp.name }}
-  {{- if $knOp.overrideAllValues }}
-  overrideAllValues:
-    {{- toYaml $knOp.overrideAllValues | nindent 4 }}
-  {{- else if $knOp.values }}
-  values:
-    {{- toYaml $knOp.values | nindent 4 }}
-  {{- end }}

@@ -62,8 +62,8 @@ metadata:
 spec:
   replayDeletion: true
   of:
-    apiVersion: helm.hops.ops.com.ai/v1alpha1
-    kind: KnativeOperator
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
     resourceRef:
       name: {{ $state.name }}-{{ $state.knativeOperator.name }}
   by:
