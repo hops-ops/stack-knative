@@ -5,13 +5,14 @@
 
 {{- $knServing := $state.knativeServing }}
 {{- $k8sPCR := $state.kubernetesProviderConfigRef }}
-{{- $servingNsReady := $state.observed.namespaceKnativeServing.ready }}
+{{- $obs := $state.observed }}
+{{- $servingNsReady := $obs.namespaceKnativeServing.ready }}
 
 # ==============================================================================
 # Knative Serving
 # ==============================================================================
 # Gated on: knative-operator + serving namespace must be ready
-{{- if and $knServing.enabled $state.observed.knativeOperator.ready $servingNsReady }}
+{{- if and $knServing.enabled $obs.knativeOperator.ready $servingNsReady }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
@@ -38,9 +39,6 @@ spec:
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
-  readiness:
-    policy: DeriveFromCelQuery
-    celQuery: "has(object.metadata.uid)"
 {{- end }}
 
 # ==============================================================================
@@ -73,17 +71,16 @@ spec:
 {{- end }}
 
 # ==============================================================================
-# Usage: Protect knative-operator from deletion until knative-serving is deleted
+# Usage: delete serving before operator (CRDs must exist for cleanup)
 # ==============================================================================
-# Knative CRDs must exist for cleanup of the KnativeServing CR.
-{{- if and $state.observed.knativeOperator.ready $state.observed.knativeServing.ready }}
+{{- if and $obs.knativeOperator.ready $obs.knativeServing.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
   name: {{ $state.name }}-delete-knative-serving-before-knative-operator
   annotations:
-    {{ setResourceNameAnnotation "usage-knative-serving" }}
+    {{ setResourceNameAnnotation "usage-serving-before-operator" }}
   labels: {{ $state.labels | toJson }}
 spec:
   replayDeletion: true
@@ -92,6 +89,32 @@ spec:
     kind: Release
     resourceRef:
       name: {{ $state.name }}-{{ $state.knativeOperator.name }}
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-{{ $knServing.name }}
+{{- end }}
+
+# ==============================================================================
+# Usage: delete serving before serving namespace
+# ==============================================================================
+{{- if and $obs.namespaceKnativeServing.ready $obs.knativeServing.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-knative-serving-before-serving-ns
+  annotations:
+    {{ setResourceNameAnnotation "usage-serving-before-serving-ns" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-knative-serving-namespace
   by:
     apiVersion: kubernetes.m.crossplane.io/v1alpha1
     kind: Object

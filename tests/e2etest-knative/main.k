@@ -44,7 +44,7 @@ _items = [
                         name = "stack-istio"
                     }
                     spec = {
-                        package = "ghcr.io/hops-ops/stack-istio:v0.6.0"
+                        package = "ghcr.io/hops-ops/stack-istio:v0.7.0"
                     }
                 }
             ]

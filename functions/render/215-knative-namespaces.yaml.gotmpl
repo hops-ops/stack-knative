@@ -33,9 +33,6 @@ spec:
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
-  readiness:
-    policy: DeriveFromCelQuery
-    celQuery: "has(object.metadata.uid)"
 {{- end }}
 
 # ==============================================================================
@@ -62,7 +59,4 @@ spec:
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
-  readiness:
-    policy: DeriveFromCelQuery
-    celQuery: "has(object.metadata.uid)"
 {{- end }}

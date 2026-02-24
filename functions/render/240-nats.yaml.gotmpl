@@ -4,6 +4,7 @@
 #
 
 {{- $nats := $state.nats }}
+{{- $obs := $state.observed }}
 
 {{- if $nats.enabled }}
 ---
@@ -44,4 +45,31 @@ spec:
   providerConfigRef:
     name: {{ $state.helmProviderConfigRef.name }}
     kind: {{ $state.helmProviderConfigRef.kind }}
+
+# ==============================================================================
+# Usage: delete eventing before nats (eventing uses NATS channels)
+# ==============================================================================
+{{- if and $obs.nats.ready $obs.knativeEventing.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-knative-eventing-before-nats
+  annotations:
+    {{ setResourceNameAnnotation "usage-eventing-before-nats" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $state.name }}-{{ $nats.name }}
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-{{ $state.knativeEventing.name }}
+{{- end }}
+
 {{- end }}

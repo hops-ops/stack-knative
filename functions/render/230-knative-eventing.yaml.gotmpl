@@ -6,15 +6,16 @@
 {{- $knServing := $state.knativeServing }}
 {{- $knEventing := $state.knativeEventing }}
 {{- $k8sPCR := $state.kubernetesProviderConfigRef }}
-{{- $servingNsReady := $state.observed.namespaceKnativeServing.ready }}
-{{- $eventingNsReady := $state.observed.namespaceKnativeEventing.ready }}
+{{- $obs := $state.observed }}
+{{- $servingNsReady := $obs.namespaceKnativeServing.ready }}
+{{- $eventingNsReady := $obs.namespaceKnativeEventing.ready }}
 {{- $eventingNsOk := or (and $knServing.enabled (eq $knEventing.namespace $knServing.namespace) $servingNsReady) $eventingNsReady }}
 
 # ==============================================================================
 # Knative Eventing
 # ==============================================================================
 # Gated on: knative-operator + eventing namespace must be ready
-{{- if and $knEventing.enabled $state.observed.knativeOperator.ready $eventingNsOk }}
+{{- if and $knEventing.enabled $obs.knativeOperator.ready $eventingNsOk }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
@@ -41,23 +42,19 @@ spec:
   providerConfigRef:
     name: {{ $k8sPCR.name }}
     kind: {{ $k8sPCR.kind }}
-  readiness:
-    policy: DeriveFromCelQuery
-    celQuery: "has(object.metadata.uid)"
 {{- end }}
 
 # ==============================================================================
-# Usage: Protect knative-operator from deletion until knative-eventing is deleted
+# Usage: delete eventing before operator (CRDs must exist for cleanup)
 # ==============================================================================
-# Knative CRDs must exist for cleanup of the KnativeEventing CR.
-{{- if and $state.observed.knativeOperator.ready $state.observed.knativeEventing.ready }}
+{{- if and $obs.knativeOperator.ready $obs.knativeEventing.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
   name: {{ $state.name }}-delete-knative-eventing-before-knative-operator
   annotations:
-    {{ setResourceNameAnnotation "usage-knative-eventing" }}
+    {{ setResourceNameAnnotation "usage-eventing-before-operator" }}
   labels: {{ $state.labels | toJson }}
 spec:
   replayDeletion: true
@@ -66,6 +63,58 @@ spec:
     kind: Release
     resourceRef:
       name: {{ $state.name }}-{{ $state.knativeOperator.name }}
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-{{ $knEventing.name }}
+{{- end }}
+
+# ==============================================================================
+# Usage: delete eventing before serving
+# ==============================================================================
+{{- if and $obs.knativeServing.ready $obs.knativeEventing.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-knative-eventing-before-knative-serving
+  annotations:
+    {{ setResourceNameAnnotation "usage-eventing-before-serving" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-{{ $knServing.name }}
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-{{ $knEventing.name }}
+{{- end }}
+
+# ==============================================================================
+# Usage: delete eventing before eventing namespace
+# ==============================================================================
+{{- if and $obs.namespaceKnativeEventing.ready $obs.knativeEventing.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-knative-eventing-before-eventing-ns
+  annotations:
+    {{ setResourceNameAnnotation "usage-eventing-before-eventing-ns" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-knative-eventing-namespace
   by:
     apiVersion: kubernetes.m.crossplane.io/v1alpha1
     kind: Object
